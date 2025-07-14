@@ -8,7 +8,6 @@ PDF_PATH = [
     os.path.join(BASE_DIR, "CyberTech Information Security Guidelines - Do's  Don'ts.pdf"),
     os.path.join(BASE_DIR, "CyberTech Reference Manual_CyberTech_Code of Business Conduct and Ethics_ V_04.3.pdf"),
     os.path.join(BASE_DIR, "CyberTech WorkFromHome Guidelines.pdf"),
-    os.path.join(BASE_DIR, "Joining Documents Checklist.pdf"),
 ]
 
 # Use /tmp for writable db directory on Render
