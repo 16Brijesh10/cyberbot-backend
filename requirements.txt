@@ -10,3 +10,4 @@ tiktoken
 pymupdf
 pymongo
 websockets
+langchain-google-genai
