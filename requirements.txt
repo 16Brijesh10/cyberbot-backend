@@ -13,4 +13,5 @@ websockets
 langchain-google-genai
 chromadb
 langchain-chroma
-
+pdf2image
+pytesseract
