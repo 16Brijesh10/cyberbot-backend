@@ -11,3 +11,6 @@ pymupdf
 pymongo
 websockets
 langchain-google-genai
+chromadb
+langchain-chroma
+
