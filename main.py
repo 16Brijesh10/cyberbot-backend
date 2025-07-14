@@ -1,30 +1,50 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from vector_db import retrieve_docs, initialize_vector_db
-from gemini_query import query_gemini, load_history_by_chat_id
 import sqlite3
+import os
 
-# DB connection
+# === Internal Imports ===
+from vector_db import retrieve_docs, initialize_vector_db, store_embeddings
+from gemini_query import query_gemini, load_history_by_chat_id
+from load_data import load_pdf, split_text
+from config import DB_PATH
+
+# === DB Connection ===
 conn = sqlite3.connect("chat_history.db", check_same_thread=False)
 cursor = conn.cursor()
 
-# Initialize FastAPI app
+# === Initialize FastAPI ===
 app = FastAPI()
 
-# Allow CORS for frontend
+# === Enable CORS (For Frontend Access) ===
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace with frontend origin in production
+    allow_origins=["*"],  # Replace with actual domain in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize vector DB
+# === Vector DB Initialization ===
 vector_db = initialize_vector_db()
 
-# Schemas
+# === Load & Embed PDFs on First Run ===
+vector_db_index = os.path.join(DB_PATH, "index")
+if not os.path.exists(vector_db_index) or not os.listdir(DB_PATH):
+    print("📄 No vector DB found. Loading and embedding PDFs...")
+    try:
+        docs = load_pdf()
+        chunks = split_text(docs)
+        store_embeddings(chunks)
+        print("✅ PDF embeddings stored in ChromaDB.")
+    except Exception as e:
+        print("❌ Failed to embed PDFs:", e)
+else:
+    print("📁 Existing vector DB found. Skipping embedding.")
+
+
+# === Pydantic Models ===
 class ChatRequest(BaseModel):
     message: str
     email: str
@@ -34,6 +54,8 @@ class HistoryRequest(BaseModel):
     email: str
     chat_id: str
 
+
+# === Routes ===
 @app.post("/chat")
 def chat(req: ChatRequest):
     print("✅ Received ChatRequest:", req)
@@ -52,6 +74,7 @@ def chat(req: ChatRequest):
         print("❌ ERROR in /chat:", str(e))
         return {"answer": "Sorry, something went wrong while processing your request."}
 
+
 @app.post("/history")
 def get_history(req: HistoryRequest):
     raw_history = load_history_by_chat_id(req.email, req.chat_id)
@@ -65,6 +88,7 @@ def get_history(req: HistoryRequest):
         "messages": formatted,
         "chatId": req.chat_id
     }
+
 
 @app.get("/history/titles")
 def get_titles(email: str):
