@@ -36,10 +36,21 @@ class HistoryRequest(BaseModel):
 
 @app.post("/chat")
 def chat(req: ChatRequest):
-    print("Received ChatRequest:", req)
-    docs = retrieve_docs(req.message, vector_db)
-    response = query_gemini(req.message, docs, req.email, req.chat_id)
-    return {"answer": response}
+    print("✅ Received ChatRequest:", req)
+
+    try:
+        print("🔍 Step 1: Retrieving documents from ChromaDB...")
+        docs = retrieve_docs(req.message, vector_db)
+        print(f"📚 Step 2: Retrieved {len(docs)} documents.")
+
+        print("🤖 Step 3: Querying Gemini model...")
+        response = query_gemini(req.message, docs, req.email, req.chat_id)
+        print("✅ Step 4: Gemini response obtained.")
+
+        return {"answer": response}
+    except Exception as e:
+        print("❌ ERROR in /chat:", str(e))
+        return {"answer": "Sorry, something went wrong while processing your request."}
 
 @app.post("/history")
 def get_history(req: HistoryRequest):
