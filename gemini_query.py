@@ -18,7 +18,7 @@ conn = sqlite3.connect("chat_history.db",check_same_thread=False)
 cursor = conn.cursor()
 
 # Drop existing table (CAUTION: This will erase existing data)
-cursor.execute("DROP TABLE IF EXISTS chat_history")
+#cursor.execute("DROP TABLE IF EXISTS chat_history")
 
 # Create table again
 cursor.execute("""
