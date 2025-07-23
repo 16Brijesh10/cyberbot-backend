@@ -83,6 +83,9 @@ def query_gemini(query, retrieved_docs, email, chat_id):
 You are an AI assistant that answers based on company data.
 Use the following company data and conversation history to answer.
 
+Do not mention or reveal any PDF filenames, document titles, or source names in your response.
+
+
 Company Data:
 {context}
 
