@@ -9,7 +9,7 @@ from config import DB_PATH, GEMINI_API_KEY
 os.environ["GOOGLE_API_KEY"] = GEMINI_API_KEY
 
 # Initialize embedding model
-embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-002")
 
 def initialize_vector_db():
     """Initialize or load the ChromaDB vector store."""
@@ -26,3 +26,4 @@ def retrieve_docs(query, vector_db):
     """Retrieve relevant documents from ChromaDB."""
     retriever = vector_db.as_retriever(search_kwargs={"k": 15})
     return retriever.invoke(query)
+
