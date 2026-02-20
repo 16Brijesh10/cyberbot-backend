@@ -3,8 +3,7 @@ import os
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter  #changed for new version
 from config import PDF_PATH
-from langchain.schema import Document
-
+from langchain_core.documents import Document #changedd for new version
 from pdf2image import convert_from_path
 import pytesseract
 
@@ -50,4 +49,5 @@ def split_text(documents):
     """Split text into smaller chunks for efficient retrieval."""
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     return text_splitter.split_documents(documents)
+
 
