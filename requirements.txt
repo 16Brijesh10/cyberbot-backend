@@ -16,3 +16,4 @@ langchain-chroma
 pdf2image
 pytesseract
 pypdf
+langchain-text-splitters
