@@ -15,9 +15,9 @@ langchain==0.1.20
 langchain-core==0.1.52
 langchain-community==0.0.38
 langchain-text-splitters==0.0.1
-langchain-google-genai
+langchain-google-genai==2.0.6
 langchain-chroma
 
 chromadb
-google-generativeai
+google-generativeai==0.8.3
 openai
