@@ -1,6 +1,6 @@
 #vector_db.py
 import os
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from config import DB_PATH, GEMINI_API_KEY
 
