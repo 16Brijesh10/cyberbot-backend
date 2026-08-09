@@ -1,4 +1,4 @@
-
+```python
 # gemini_query.py
 
 import os
@@ -31,7 +31,10 @@ DB_FILE = "chat_history.db"
 
 def get_connection():
     """
-    Create a lightweight SQLite connection.
+    Create a new SQLite connection.
+
+    A new connection is created for each database operation
+    instead of keeping a global connection/cursor.
     """
 
     return sqlite3.connect(
@@ -41,17 +44,23 @@ def get_connection():
 
 
 # ============================================================
-# Initialize Chat Database
+# Initialize Database
 # ============================================================
 
 def initialize_chat_database():
+    """
+    Create the chat_history table if it does not exist.
+
+    Chat history is intentionally cleared whenever the
+    application starts to keep the deployment lightweight.
+    """
 
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
 
-        # Create table if it doesn't exist
+        # Create table if it doesn't already exist
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS chat_history (
@@ -69,7 +78,7 @@ def initialize_chat_database():
         # ----------------------------------------------------
         # Clear chat history on application restart
         #
-        # This is intentional for your deployment.
+        # This is intentional.
         # ----------------------------------------------------
 
         cursor.execute(
@@ -80,12 +89,23 @@ def initialize_chat_database():
 
         print("🧹 Chat history cleared on startup.")
 
+    except Exception as e:
+
+        conn.rollback()
+
+        print(
+            "❌ Database initialization error:",
+            repr(e)
+        )
+
+        raise
+
     finally:
 
         conn.close()
 
 
-# Initialize database
+# Initialize database when application starts
 initialize_chat_database()
 
 
@@ -95,24 +115,32 @@ initialize_chat_database()
 
 def clean_email(email):
     """
-    Convert the email into a plain string.
+    Convert the email to a normal plain-text string.
 
-    Handles frontend values such as:
+    Handles values such as:
 
-    [user@gmail.com](mailto:user@gmail.com)
+    brijesh.peju@gmail.com
+
+    and accidentally formatted values such as:
+
+    [brijesh.peju@gmail.com](mailto:brijesh.peju@gmail.com)
     """
 
     email = str(email).strip()
 
+    # Handle Markdown email format
     if email.startswith("[") and "](" in email:
 
         try:
+
             email = email.split("](")[0]
             email = email.lstrip("[")
 
         except Exception:
+
             pass
 
+    # Handle mailto: prefix
     if email.startswith("mailto:"):
 
         email = email.replace(
@@ -125,7 +153,7 @@ def clean_email(email):
 
 
 # ============================================================
-# Save Chat
+# Save Chat To Database
 # ============================================================
 
 def save_to_db(
@@ -134,19 +162,33 @@ def save_to_db(
     assistant_response,
     chat_id
 ):
+    """
+    Save one user/assistant conversation to SQLite.
+
+    The first message of a chat becomes the chat title.
+    """
 
     # --------------------------------------------------------
-    # Convert everything to normal Python strings
+    # Convert values to normal Python strings
     # --------------------------------------------------------
 
     email = clean_email(email)
-    user_query = str(user_query)
-    assistant_response = str(assistant_response)
-    chat_id = str(chat_id)
+
+    user_query = str(
+        user_query
+    )
+
+    assistant_response = str(
+        assistant_response
+    )
+
+    chat_id = str(
+        chat_id
+    )
 
 
     # --------------------------------------------------------
-    # Create connection
+    # Create database connection
     # --------------------------------------------------------
 
     conn = get_connection()
@@ -155,7 +197,7 @@ def save_to_db(
     try:
 
         # ----------------------------------------------------
-        # Check if this is the first message
+        # Check whether this is the first message
         # ----------------------------------------------------
 
         cursor.execute(
@@ -178,11 +220,23 @@ def save_to_db(
         # First message becomes chat title
         # ----------------------------------------------------
 
-        title = user_query if count == 0 else None
+        if count == 0:
+
+            title = user_query
+
+        else:
+
+            title = None
+
+
+        # Make sure title is SQLite-safe
+        if title is not None:
+
+            title = str(title)
 
 
         # ----------------------------------------------------
-        # Insert chat
+        # Insert conversation
         # ----------------------------------------------------
 
         cursor.execute(
@@ -207,9 +261,11 @@ def save_to_db(
             )
         )
 
+
         conn.commit()
 
-        print("✅ Chat saved.")
+        print("✅ Chat saved to SQLite.")
+
 
     except Exception as e:
 
@@ -222,22 +278,30 @@ def save_to_db(
 
         raise
 
+
     finally:
 
         conn.close()
 
 
 # ============================================================
-# Load Chat History
+# Load Chat History By Chat ID
 # ============================================================
 
 def load_history_by_chat_id(
     email,
     chat_id
 ):
+    """
+    Load previous messages belonging to a specific chat.
+    """
 
     email = clean_email(email)
-    chat_id = str(chat_id)
+
+    chat_id = str(
+        chat_id
+    )
+
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -262,22 +326,30 @@ def load_history_by_chat_id(
 
         return cursor.fetchall()
 
+
     finally:
 
         conn.close()
 
 
 # ============================================================
-# Load History By Date
+# Load Chat History By Date
 # ============================================================
 
 def load_history_by_date(
     email,
     selected_date
 ):
+    """
+    Load chat history for a specific date.
+    """
 
     email = clean_email(email)
-    selected_date = str(selected_date)
+
+    selected_date = str(
+        selected_date
+    )
+
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -302,9 +374,119 @@ def load_history_by_date(
 
         return cursor.fetchall()
 
+
     finally:
 
         conn.close()
+
+
+# ============================================================
+# Extract Gemini Text
+# ============================================================
+
+def extract_gemini_text(response):
+    """
+    Extract only the actual text from a Gemini response.
+
+    Newer versions of LangChain/Gemini may return:
+
+    [
+        {
+            "type": "text",
+            "text": "Hello!",
+            "extras": {
+                "signature": "..."
+            }
+        }
+    ]
+
+    We only want the 'text' field.
+
+    The signature and other metadata are ignored.
+    """
+
+    # --------------------------------------------------------
+    # Get response content
+    # --------------------------------------------------------
+
+    if not hasattr(
+        response,
+        "content"
+    ):
+
+        return str(
+            response
+        ).strip()
+
+
+    content = response.content
+
+
+    # --------------------------------------------------------
+    # Content is a list
+    # --------------------------------------------------------
+
+    if isinstance(
+        content,
+        list
+    ):
+
+        text_parts = []
+
+
+        for item in content:
+
+            # -----------------------------------------------
+            # Dictionary content block
+            # -----------------------------------------------
+
+            if isinstance(
+                item,
+                dict
+            ):
+
+                if item.get(
+                    "type"
+                ) == "text":
+
+                    text = item.get(
+                        "text",
+                        ""
+                    )
+
+                    if text:
+
+                        text_parts.append(
+                            str(text)
+                        )
+
+
+            # -----------------------------------------------
+            # Plain string content block
+            # -----------------------------------------------
+
+            elif isinstance(
+                item,
+                str
+            ):
+
+                text_parts.append(
+                    item
+                )
+
+
+        return "".join(
+            text_parts
+        ).strip()
+
+
+    # --------------------------------------------------------
+    # Content is already a string
+    # --------------------------------------------------------
+
+    return str(
+        content
+    ).strip()
 
 
 # ============================================================
@@ -317,14 +499,29 @@ def query_gemini(
     email,
     chat_id
 ):
+    """
+    Query Gemini using:
+
+    1. Retrieved company documents
+    2. Previous conversation history
+    3. Current user question
+    """
 
     # --------------------------------------------------------
-    # Normalize input
+    # Normalize inputs
     # --------------------------------------------------------
 
-    query = str(query)
-    email = clean_email(email)
-    chat_id = str(chat_id)
+    query = str(
+        query
+    )
+
+    email = clean_email(
+        email
+    )
+
+    chat_id = str(
+        chat_id
+    )
 
 
     # --------------------------------------------------------
@@ -343,19 +540,45 @@ def query_gemini(
 
     if retrieved_docs:
 
-        context = "\n\n".join(
-            [
-                str(doc.page_content)
-                for doc in retrieved_docs
-                if doc.page_content
-            ]
-        )
+        context_parts = []
+
+        for doc in retrieved_docs:
+
+            if hasattr(
+                doc,
+                "page_content"
+            ):
+
+                content = str(
+                    doc.page_content
+                )
+
+                if content.strip():
+
+                    context_parts.append(
+                        content
+                    )
+
+
+        if context_parts:
+
+            context = "\n\n".join(
+                context_parts
+            )
+
+        else:
+
+            context = (
+                "No relevant company information "
+                "was retrieved."
+            )
 
     else:
 
         context = (
-            "No relevant company information was retrieved "
-            "from the company knowledge base."
+            "No relevant company information "
+            "was retrieved from the company "
+            "knowledge base."
         )
 
 
@@ -365,16 +588,25 @@ def query_gemini(
 
     if conversation_history:
 
+        history_parts = []
+
+        for q, a in conversation_history:
+
+            history_parts.append(
+                f"User: {str(q)}\n"
+                f"Assistant: {str(a)}"
+            )
+
+
         history = "\n\n".join(
-            [
-                f"User: {str(q)}\nAssistant: {str(a)}"
-                for q, a in conversation_history
-            ]
+            history_parts
         )
 
     else:
 
-        history = "No previous conversation."
+        history = (
+            "No previous conversation."
+        )
 
 
     # --------------------------------------------------------
@@ -384,21 +616,21 @@ def query_gemini(
     full_prompt = f"""
 You are an AI assistant that answers questions about a company.
 
-Use the provided company information and conversation
-history to answer the user's question.
+Use the provided company information and conversation history
+to answer the user's question.
 
 RULES:
 
-1. Use the provided company information as the primary
-   source for company-related questions.
+1. Use the provided company information as the primary source
+   for company-related questions.
 
-2. Do not invent company policies, rules, procedures,
-   benefits, or other company-specific information.
+2. Do not invent company policies, rules, procedures, benefits,
+   or other company-specific information.
 
-3. If the provided company information does not contain
-   enough information to answer a company-related question,
-   clearly state that the available company information
-   does not provide the answer.
+3. If the provided company information does not contain enough
+   information to answer a company-related question, clearly
+   state that the available company information does not
+   provide the answer.
 
 4. You may answer simple greetings and normal conversation
    naturally.
@@ -430,29 +662,37 @@ Assistant:
     # Call Gemini
     # --------------------------------------------------------
 
+    print("🤖 Calling Gemini...")
+
     response = gemini_llm.invoke(
         full_prompt
     )
 
 
     # --------------------------------------------------------
-    # Extract response
+    # Extract ONLY text
     # --------------------------------------------------------
 
-    if hasattr(response, "content"):
-
-        answer = response.content
-
-    else:
-
-        answer = str(response)
+    answer = extract_gemini_text(
+        response
+    )
 
 
     # --------------------------------------------------------
-    # Make sure SQLite receives a string
+    # Safety fallback
     # --------------------------------------------------------
 
-    answer = str(answer)
+    if not answer:
+
+        answer = (
+            "Sorry, I could not generate a response."
+        )
+
+
+    # Make absolutely sure SQLite receives a string
+    answer = str(
+        answer
+    )
 
 
     # --------------------------------------------------------
@@ -467,5 +707,9 @@ Assistant:
     )
 
 
-    return answer
+    # --------------------------------------------------------
+    # Return clean answer to FastAPI
+    # --------------------------------------------------------
 
+    return answer
+```
