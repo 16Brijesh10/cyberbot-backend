@@ -8,7 +8,7 @@ import os
 os.environ["GOOGLE_API_KEY"] = GEMINI_API_KEY
 
 # Initialize Gemini Model
-gemini_llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
+gemini_llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
 
 import sqlite3
 from datetime import datetime   
