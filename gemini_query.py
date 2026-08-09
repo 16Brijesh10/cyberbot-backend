@@ -1,4 +1,4 @@
-```python
+
 # gemini_query.py
 
 import os
@@ -712,4 +712,4 @@ Assistant:
     # --------------------------------------------------------
 
     return answer
-```
+
