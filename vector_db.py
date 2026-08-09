@@ -2,26 +2,31 @@ import os
 from langchain_community.vectorstores import Chroma
 from langchain_core.embeddings import Embeddings
 from google import genai
+from google.genai import types
 from config import DB_PATH, GEMINI_API_KEY
 
 
 class GeminiEmbeddings(Embeddings):
     def __init__(self):
-        self.client = genai.Client(api_key=GEMINI_API_KEY)
+        # Force v1beta REST API version
+        self.client = genai.Client(
+            api_key=GEMINI_API_KEY,
+            http_options={'api_version': 'v1beta'}
+        )
 
     def embed_documents(self, texts):
         response = self.client.models.embed_content(
-            model="text-embedding-004",  # ✅ Updated from models/embedding-001
+            model="text-embedding-004",
             contents=texts
         )
-        return [item.values for item in response.embeddings]  # ✅ Corrected object attribute access
+        return [item.values for item in response.embeddings]
 
     def embed_query(self, text):
         response = self.client.models.embed_content(
-            model="text-embedding-004",  # ✅ Updated from models/embedding-001
-            contents=[text]
+            model="text-embedding-004",
+            contents=text
         )
-        return response.embeddings[0].values  # ✅ Corrected object attribute access
+        return response.embeddings[0].values
 
 
 embedding_model = GeminiEmbeddings()
