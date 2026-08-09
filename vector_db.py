@@ -1,35 +1,13 @@
 import os
 from langchain_community.vectorstores import Chroma
-from langchain_core.embeddings import Embeddings
-from google import genai
-from google.genai import types
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from config import DB_PATH, GEMINI_API_KEY
 
-
-class GeminiEmbeddings(Embeddings):
-    def __init__(self):
-        # Force v1beta REST API version
-        self.client = genai.Client(
-            api_key=GEMINI_API_KEY,
-            http_options={'api_version': 'v1beta'}
-        )
-
-    def embed_documents(self, texts):
-        response = self.client.models.embed_content(
-            model="text-embedding-004",
-            contents=texts
-        )
-        return [item.values for item in response.embeddings]
-
-    def embed_query(self, text):
-        response = self.client.models.embed_content(
-            model="text-embedding-004",
-            contents=text
-        )
-        return response.embeddings[0].values
-
-
-embedding_model = GeminiEmbeddings()
+# Initialize Google's official LangChain embedding wrapper
+embedding_model = GoogleGenerativeAIEmbeddings(
+    model="models/text-embedding-004",
+    google_api_key=GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
+)
 
 
 def initialize_vector_db():
