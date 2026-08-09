@@ -11,17 +11,17 @@ class GeminiEmbeddings(Embeddings):
 
     def embed_documents(self, texts):
         response = self.client.models.embed_content(
-            model="models/embedding-001",
+            model="text-embedding-004",  # ✅ Updated from models/embedding-001
             contents=texts
         )
-        return [item.embedding for item in response.embeddings]
+        return [item.values for item in response.embeddings]  # ✅ Corrected object attribute access
 
     def embed_query(self, text):
         response = self.client.models.embed_content(
-            model="models/embedding-001",
+            model="text-embedding-004",  # ✅ Updated from models/embedding-001
             contents=[text]
         )
-        return response.embeddings[0].embedding
+        return response.embeddings[0].values  # ✅ Corrected object attribute access
 
 
 embedding_model = GeminiEmbeddings()
