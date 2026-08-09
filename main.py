@@ -229,4 +229,3 @@ def get_titles(email: str):
             for chat_id, title, date in results
         ]
     }
-```
