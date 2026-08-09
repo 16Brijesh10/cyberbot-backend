@@ -9,7 +9,7 @@ from config import DB_PATH, GEMINI_API_KEY
 os.environ["GOOGLE_API_KEY"] = GEMINI_API_KEY
 
 # Initialize embedding model
-embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+embedding_model = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
 
 def initialize_vector_db():
     """Initialize or load the ChromaDB vector store."""
